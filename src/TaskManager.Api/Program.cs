@@ -3,11 +3,12 @@ using Microsoft.EntityFrameworkCore;
 using TaskManager.Api.Data;
 using Scalar.AspNetCore;
 using System.Net.WebSockets;
-using TaskManager.Api.Data;
 using TaskManager.Api.Models;
 using TaskManager.Api.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using TaskManager.Api.Mappings;
+using TaskManager.Api.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,63 +36,80 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-//var summaries = new[]
-//{
-//    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-//};
 
-//app.MapGet("/weatherforecast", () =>
-//{
-//    var forecast =  Enumerable.Range(1, 5).Select(index =>
-//        new WeatherForecast
-//        (
-//            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-//            Random.Shared.Next(-20, 55),
-//            summaries[Random.Shared.Next(summaries.Length)]
-//        ))
-//        .ToArray();
-//    return forecast;
-//})
-//.WithName("GetWeatherForecast");
-
-var tasks = app.MapGroup("/api/tasks").RequireAuthorization();
+//var tasks = app.MapGroup("/api/tasks").RequireAuthorization();
+var tasks = app.MapGroup("/api/tasks").AllowAnonymous(); //TEMP - remove AllowAnonymous to require auth
 
 tasks.MapGet("/", async (ApplicationDbContext db, ClaimsPrincipal user) =>
 {
-    var uid = user.FindFirst(ClaimTypes.NameIdentifier)?.Value!;
+    //var uid = user.FindFirst(ClaimTypes.NameIdentifier)?.Value!; --> moved to Extensions
+    var uid = user.GetUserId();
+
     var list = await db.TaskItems
         .Where(t => !t.IsDeleted && t.OwnerId == uid)
         .OrderBy(t => t.DueDate)
         .ToListAsync();
-    return Results.Ok(list.Select(t => new TaskDto
-    {
-        /* map fields */
-    }));
+
+    //map each entity to a TaskDto
+    var dtoList = list.Select(TaskMapper.ToDto);
+
+    return Results.Ok(dtoList);
+    //return Results.Ok(list.Select(t => new TaskDto
+    //{
+    //    /* map fields */
+    //}));
 });
 
 tasks.MapPost("/", async (CreateTaskDto dto, ApplicationDbContext db, ClaimsPrincipal user) =>
 {
-    var uid = user.FindFirst(ClaimTypes.NameIdentifier)?.Value!;
-    var t = new TaskItem
+    //var uid = user.FindFirst(ClaimTypes.NameIdentifier)?.Value!;
+    //var t = new TaskItem
+    //{
+    //    Title = dto.Title,
+    //    Description = dto.Description,
+    //    DueDate = dto.DueDate,
+    //    OwnerId = uid
+    //};
+
+    //Validate incoming DTOs before mapping
+    if(!dto.TryValidate(out var validationProblem))
     {
-        Title = dto.Title,
-        Description = dto.Description,
-        DueDate = dto.DueDate,
-        OwnerId = uid
-    };
+        return validationProblem!;  //returns 400 with details
+    }
+
+
+
+    //var uid = user.GetUserId();
+    string uid = "None";
+
+    var t = TaskMapper.ToEntity(dto);
+    t.OwnerId = uid;
+    t.CreatedAt = DateTime.UtcNow;
+
     db.TaskItems.Add(t);
     await db.SaveChangesAsync();
-    return Results.Created($"/api/tasks/{t.Id}", t);
+    return Results.Created($"api/tasks/{t.Id}", TaskMapper.ToDto(t));
+    //return Results.Created($"/api/tasks/{t.Id}", t);
 });
 
+//TODO - Add further validations (example: DueDate cannot be in the past)
 tasks.MapPut("/{id:int}", async (int id, CreateTaskDto dto, ApplicationDbContext db, ClaimsPrincipal user) =>
 {
+
+    //Validate incoming DTOs before saving. 
+    if(!dto.TryValidate(out var validationProblem))
+    {
+        return validationProblem!;  //returns 400 with details
+    }
+
     var uid = user.FindFirst(ClaimTypes.NameIdentifier)?.Value!;
     var t = await db.TaskItems.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == uid);
     if (t is null) return Results.NotFound();
     t.Title = dto.Title;
     t.Description = dto.Description;
     t.DueDate = dto.DueDate;
+    t.UpdatedAt = DateTime.UtcNow;
+    t.Priority = dto.Priority;
     t.UpdatedAt = DateTime.UtcNow;
     await db.SaveChangesAsync();
     return Results.NoContent();
