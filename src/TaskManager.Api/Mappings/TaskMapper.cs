@@ -37,6 +37,7 @@ namespace TaskManager.Api.Mappings
                 Title = dto.Title,
                 Description = dto.Description,
                 DueDate = dto.DueDate,
+                Owner = dto.Owner,
                 Priority = dto.Priority  //make sure this mapping works correctly
            };
     }

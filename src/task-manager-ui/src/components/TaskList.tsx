@@ -4,6 +4,7 @@ type TaskDto = {
     id: number;
     title: string;
     description?: string;
+    owner: string;
     dueDate: string;
 };
 
@@ -21,8 +22,8 @@ export default function TaskList() {
             <h2>Tasks</h2>
             <ul>
                 {tasks.map(t => (
-                    <li key={t.id}>
-                        <strong>{t.title}</strong> - {t.dueDate}
+                    <li key={t.owner}>
+                        <strong>{t.title}</strong> - {t.description} - {t.dueDate}
                     </li>
                 ))}
             </ul>

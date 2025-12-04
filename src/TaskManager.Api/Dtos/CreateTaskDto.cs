@@ -12,6 +12,8 @@ namespace TaskManager.Api.Dtos
         [StringLength(2000)]
         public string? Description { get; set; }
 
+        [StringLength(2000)]
+        public string? Owner { get; set; }
 
         public DateTime? DueDate { get; set; }
 

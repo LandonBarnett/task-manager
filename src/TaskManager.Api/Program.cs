@@ -43,10 +43,10 @@ var tasks = app.MapGroup("/api/tasks").AllowAnonymous(); //TEMP - remove AllowAn
 tasks.MapGet("/", async (ApplicationDbContext db, ClaimsPrincipal user) =>
 {
     //var uid = user.FindFirst(ClaimTypes.NameIdentifier)?.Value!; --> moved to Extensions
-    var uid = user.GetUserId();
+  //  var uid = user.GetUserId();
 
     var list = await db.TaskItems
-        .Where(t => !t.IsDeleted && t.OwnerId == uid)
+        .Where(t => !t.IsDeleted && t.Owner.Equals("Landon")/*t.OwnerId == uid*/)
         .OrderBy(t => t.DueDate)
         .ToListAsync();
 

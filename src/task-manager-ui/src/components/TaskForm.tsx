@@ -7,6 +7,7 @@ const schema = yup.object({
     title: yup.string().required("Title is required"),
     description: yup.string().max(500, "Too long"),
     dueDate: yup.date().required("Due date required").min(new Date(), "Must be in future"),
+    owner: yup.string().max(500, "Too long"),
 });
 
 export default function TaskForm(){
@@ -33,6 +34,9 @@ export default function TaskForm(){
             {errors.description && <span>{errors.description.message}</span>}
 
             <input {...register("description")} placeholder="Description" />
+            {errors.description && <span>{errors.description.message}</span>}
+
+            <input {...register("owner")} placeholder="Owner" />
             {errors.description && <span>{errors.description.message}</span>}
 
            <input type={"date"} {...register("dueDate")} />

@@ -13,6 +13,8 @@
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? DueDate { get; set; }
         public string OwnerId { get; set; } = null!;
+
+        public string? Owner { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public bool IsDeleted { get; set; } = false;
 
